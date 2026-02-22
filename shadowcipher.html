@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shadow Shift Cipher - Tactical Console</title>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+/* Grid background */
+body::before {
+    content: "";
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(rgba(0,255,0,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,0,0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+}
+
+/* Subtle scanline */
+body::after {
+    content: "";
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(0,255,0,0.03),
+        rgba(0,255,0,0.03) 2px,
+        transparent 2px,
+        transparent 4px
+    );
+    pointer-events: none;
+}
+</style>
+</head>
+
+<body class="bg-black text-green-400 font-mono min-h-screen flex items-center justify-center p-6">
+
+<div class="w-full max-w-3xl border border-green-700 p-8 bg-black shadow-[0_0_30px_rgba(0,255,0,0.2)]">
+
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold tracking-widest">
+            SHADOW SHIFT CIPHER
+        </h1>
+        <p class="text-xs text-green-600 mt-1">
+            CLASSIFIED ENCRYPTION SYSTEM – AUTHORIZED ACCESS ONLY
+        </p>
+        <div class="h-px bg-green-700 mt-3"></div>
+    </div>
+
+    <!-- Key Input -->
+    <label class="text-xs text-green-600">ENCRYPTION KEY</label>
+    <input id="keyInput"
+        class="w-full bg-black border border-green-700 p-3 mt-1 mb-4 focus:outline-none focus:ring-1 focus:ring-green-500">
+
+    <!-- Input -->
+    <label class="text-xs text-green-600">PLAINTEXT / CIPHERTEXT</label>
+    <textarea id="inputText"
+        rows="4"
+        class="w-full bg-black border border-green-700 p-3 mt-1 mb-4 focus:outline-none focus:ring-1 focus:ring-green-500"></textarea>
+
+    <!-- Buttons -->
+    <div class="grid grid-cols-3 gap-4 mb-4">
+        <button onclick="encrypt()"
+            class="border border-green-600 py-2 hover:bg-green-900 transition">
+            [ ENCRYPT ]
+        </button>
+
+        <button onclick="decrypt()"
+            class="border border-green-600 py-2 hover:bg-green-900 transition">
+            [ DECRYPT ]
+        </button>
+
+        <button onclick="copyOutput()"
+            class="border border-green-600 py-2 hover:bg-green-900 transition">
+            [ COPY ]
+        </button>
+    </div>
+
+    <!-- Output -->
+    <label class="text-xs text-green-600">OUTPUT STREAM</label>
+    <textarea id="outputText"
+        rows="4"
+        readonly
+        class="w-full bg-black border border-green-700 p-3 mt-1 mb-6"></textarea>
+
+    <!-- Shift Log -->
+    <label class="text-xs text-green-600">OPERATION LOG</label>
+    <div id="shiftLog"
+        class="bg-black border border-green-700 p-3 h-40 overflow-y-auto text-sm whitespace-pre-wrap"></div>
+
+</div>
+
+<script>
+const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+function shiftLetter(letter, shift) {
+    const index = alphabet.indexOf(letter);
+    if (index === -1) return letter;
+
+    let newIndex = (index + shift) % 26;
+    if (newIndex < 0) newIndex += 26;
+
+    return alphabet[newIndex];
+}
+
+function getKeySeed(key) {
+    key = key.toUpperCase();
+    let total = 0;
+
+    for (let i = 0; i < key.length; i++) {
+
+        let char = key[i];
+
+        if (/[A-Z]/.test(char)) {
+            let value = char.charCodeAt(0) - 64; // A=1
+            total += value * (i + 1);
+        }
+
+        else if (/[0-9]/.test(char)) {
+            let value = parseInt(char) + 27; // 0=27, 9=36
+            total += value * (i + 1);
+        }
+
+    }
+
+    return total % 26;
+}
+
+function encrypt() {
+    let text = document.getElementById("inputText").value.toUpperCase();
+    let key = document.getElementById("keyInput").value;
+    let result = "";
+    let prevPlainIndex = null;
+    let keySeed = getKeySeed(key);
+    let log = ">>> ENCRYPTION INITIATED\n\n";
+
+    for (let i = 0; i < text.length; i++) {
+        let char = text[i];
+
+        if (/[A-Z]/.test(char)) {
+
+            let shift = (prevPlainIndex === null)
+                ? keySeed
+                : prevPlainIndex + 1 + keySeed;
+
+            let encrypted = shiftLetter(char, shift);
+            result += encrypted;
+
+            log += `[${i}] ${char} -> shift(${shift}) -> ${encrypted}\n`;
+
+            prevPlainIndex = char.charCodeAt(0) - 65;
+
+        } else {
+            result += char;
+        }
+    }
+
+    log += "\n>>> ENCRYPTION COMPLETE";
+
+    document.getElementById("outputText").value = result;
+    document.getElementById("shiftLog").textContent = log;
+}
+
+function decrypt() {
+    let text = document.getElementById("inputText").value.toUpperCase();
+    let key = document.getElementById("keyInput").value;
+    let result = "";
+    let prevPlainIndex = null;
+    let keySeed = getKeySeed(key);
+    let log = ">>> DECRYPTION INITIATED\n\n";
+
+    for (let i = 0; i < text.length; i++) {
+        let char = text[i];
+
+        if (/[A-Z]/.test(char)) {
+
+            let shift = (prevPlainIndex === null)
+                ? keySeed
+                : prevPlainIndex + 1 + keySeed;
+
+            let decrypted = shiftLetter(char, -shift);
+            result += decrypted;
+
+            log += `[${i}] ${char} -> shift(-${shift}) -> ${decrypted}\n`;
+
+            prevPlainIndex = decrypted.charCodeAt(0) - 65;
+
+        } else {
+            result += char;
+        }
+    }
+
+    log += "\n>>> DECRYPTION COMPLETE";
+
+    document.getElementById("outputText").value = result;
+    document.getElementById("shiftLog").textContent = log;
+}
+
+function copyOutput() {
+    let output = document.getElementById("outputText");
+    output.select();
+    document.execCommand("copy");
+    alert("Transmission copied.");
+}
+</script>
+
+</body>
+</html>
